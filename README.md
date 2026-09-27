@@ -8,7 +8,8 @@ Rust 函数式声明式设计（FDD）skill：纯领域核心、eDSL + 解释器
 
 - `SKILL.md` — skill 本体：何时使用、十步设计工作流、硬规则、Haskell→Rust 速查
 - `references/fdd-method.md` — 四支柱、分层表、自顶向下签名先行、HFM
-- `references/rust-patterns.md` — 五种接口选型、Typed-Untyped、状态/并发/资源、KV/SQL 路线、错误域、累积校验、测试替身阶梯
+- `references/rust-patterns.md` — 五种接口选型、Typed-Untyped、状态/并发/资源、KV/SQL 路线、错误域、累积校验、测试替身阶梯、Actor 协议、录制-重放
+- `references/skeletons.md` — 可直接抄的三套最小模板（命令 enum + 三解释器、Service Handle mock、Validated）
 - `references/chapters-index.md` — 十七讲路由表 + 测验模式
 
 ## 安装（Muse Code）

@@ -96,8 +96,12 @@ Follow these steps in order. Skip a step only by saying why.
 
 ## References
 
-- `references/fdd-method.md` — pillars, layers, top-down flow.
-- `references/rust-patterns.md` — Haskell→Rust pattern choices with costs.
+- `references/fdd-method.md` — pillars, layers, top-down flow, three
+  diagrams, end-to-end cleanup checklist.
+- `references/rust-patterns.md` — Haskell→Rust pattern choices with costs,
+  actor protocols, record-replay rig.
+- `references/skeletons.md` — copy-paste templates: command enum + three
+  interpreters, Service Handle mock, Validated.
 - `references/chapters-index.md` — which chapter/method applies to a problem,
   plus the quiz mode.
 

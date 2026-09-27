@@ -93,3 +93,60 @@ not type-level DSLs. Handlers stay thin: parse → call service → render.
   the same warning.
 - Coverage and mocks are not goals: cover seams and properties, not lines;
   every mock must correspond to a real interpreter contract test.
+
+## Actor 协议：从"能通信"到"通信不错乱"（ch 8）
+
+- 第一性原理：把"共享 + 加锁"换成"独占 + 传消息"。actor 状态是被
+  move 进 actor 线程的局部变量，其他线程在类型层面就够不着——没有
+  忘记加锁的可能。
+- 请求—响应模式：两个单向通道合成一个双向 Pipe（请求通道 + 响应通道）。
+  Rust 对 Haskell MVar 版的一处真实改进：响应方线程结束（正常或 panic）
+  会 drop 它持有的 Sender，请求方 `recv()` 立刻得到 `Err` 而不是永远挂起。
+  但这防不住所有死锁——两个线程互等对方的锁照样死。
+- 不安全的协议长什么样：请求 enum 与响应 enum 是两个独立类型，
+  `match req { Square(n) => Reversed(..) }` 这种错配能通过编译。
+  "想要 Square 10 却收到 Reversed"是任何通信协议的共有问题。
+- 修法：把回信通道绑进请求——`Ask<Q, A> { question: Q, reply: SyncSender<A> }`，
+  答案类型由问题决定。把 `ask.answer` 的参数写错类型，看编译器说什么——
+  这个五秒实验就是"类型安全的协议"的全部含义。
+- 持有规则：需要向谁发消息，就持有发往它信箱的 Sender；回信走 Ask 自带的
+  一次性 reply 通道，不另存。父持有发往子 actor 的 Sender，子只带走自己的
+  Ask reply 加发往父/模拟器的 Sender。
+- spawn 铁律：`thread::spawn` 闭包是 `'static`，借用的栈变量传不进去——
+  move 所有权进去，共享用 `Arc`。
+- MVar 模型的上限（原书总结）：并发数据模型变大变复杂时 MVar 力不从心，
+  大型 MVar 模型趋向过度复杂，届时转向 STM。在 Rust 对应：通道 + 小临界区
+  （见"状态"一节）。线程成本与 Haskell 绿色线程不同，默认粗粒度 actor 起步。
+
+## 录制—重放实操（附录 D）
+
+机制三句话：框架里烘焙序列化能力 → 录制模式跑场景，每步追加
+`{step, entry, mode}` 进 JSON（含输入、输出、参数）→ 重放模式逐步比对，
+不匹配精确报出第几步。这是第 15 章手写测试替身的自然演化：业务逻辑泛型
+于 `trait Lang`，录制器（干真活 + 追加记录）与重放器（组装实际调用 →
+比对 → 返回录制值）各实现一次，逻辑"意识不到魔法"。
+
+serde 形状：`#[serde(tag = "tag")]` 的 Entry enum（每变体合同不同：
+问答类比对输入输出，Tell 类只比 text）；`#[serde(default)]` 让 mode 可省，
+录制文件可手改——小改直接改 JSON，不必重录。
+
+五种模式（Normal 为默认）：
+
+| 模式 | 行为 | 用于 |
+|---|---|---|
+| Normal | 比对 + 用录制值顶替 | 默认 |
+| NoVerify | 放行本步差异 | 时间戳/UUID/随机数步骤；或把时钟做成可注入 |
+| NoMock | 本步调真实实现 | 混合真实调用（DB/日志器） |
+| GlobalNoVerify / GlobalNoMocking | 整份录制套用 | 大面积放行/联调 |
+| GlobalSkip | 跳过 | 废弃场景 |
+
+耗时阈值：`Recorded` 留 `time_threshold_ms: Option<f64>`（带
+skip_serializing_if，不设不落盘），重放计时超限即报。但耗时断言只进独立
+性能套件（criterion + `#[ignore]`），不进正确性测试——CI 负载抖动会让它变红。
+
+Rust 生态对照：日常用 insta 快照固定"输出长什么样"（零成本）；只有要
+"精确到第几步/中途注错/混合真实调用"才自搭录制—重放。
+
+黄金纪律（最危险误读）：录制只固定行为，不判断对错。批准一份快照/录制 =
+签字"这个行为是对的"。正确工作流：跑录制 → 人工逐条读（顺序、参数对吗）
+→ 确认再提交。省掉中间那步，固定住的可能是一个 bug。
