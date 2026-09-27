@@ -14,7 +14,7 @@ Rust 函数式声明式设计（FDD）skill：纯领域核心、eDSL + 解释器
 ## 安装（Muse Code）
 
 ```sh
-git clone https://github.com/<你的账号>/functional-design-rust.git
+git clone https://github.com/iTZR1314/functional-design-rust.git
 muse skills install functional-design-rust
 ```
 
